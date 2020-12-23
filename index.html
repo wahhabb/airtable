@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://code.jquery.com/jquery-1.12.2.min.js"></script>
+    <script src="airtable.browser.js"></script>
+    <style>
+      body {
+        padding: 2em;
+		background-image: url(https://www.ruhaniat.org/images/ruhaniat/sri-bkg.jpg);
+		font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+		    font-size: 16px;
+		    line-height: 1.42857143;
+		    color: #111;
+      }
+	  #container {
+		  background-color: #fff7ea;
+		  padding: 2em;
+	  }
+	  button {
+		  display: block;
+		      font-size: 120%;
+		      background-color: #f5b041;
+		      padding: 6px 18px;
+		      border-radius: 18px;
+	  }
+      #entry span {
+        width: 10em;
+        display: inline-block;
+        margin-top: 0.5em;
+      }
+    </style>
+  </head>
+  <body>
+	  <div id="container">
+    <h1>Ruhaniat Events from Airtable</h1>
+    <div id="events"></div>
+
+    <hr />
+    <div id="entry">
+		<h2>Create New Event Entry</h2>
+      <span>Event Name: </span
+      ><input type="text" name="event-name" id="event-name" size="20" /><br />
+      <span>Link: </span>
+	  <input type= name="link" id="link" size="20" /><br /><br />
+      <span>Event Description: </span
+      ><textarea type="text" name="description" id="description" rows="10" cols="60" ></textarea><br />
+      <span>Event Date & Time: </span
+      ><input type="date" name="event-date" id="event-date" />
+      <select name="event-time" id="event-time">
+        <option value="00:00">12:00am</option>
+        <option value="00:30">12:30am</option>
+        <option value="01:00">1:00am</option>
+        <option value="01:30">1:30am</option>
+        <option value="02:00">2:00am</option>
+        <option value="02:30">2:30am</option>
+        <option value="03:00">3:00am</option>
+        <option value="03:30">3:30am</option>
+        <option value="04:00">4:00am</option>
+        <option value="04:30">4:30am</option>
+        <option value="05:00">5:00am</option>
+        <option value="05:30">5:30am</option>
+        <option value="06:00">6:00am</option>
+        <option value="06:30">6:30am</option>
+        <option value="07:00">7:00am</option>
+        <option value="07:30">7:30am</option>
+        <option value="08:00">8:00am</option>
+        <option value="08:30">8:30am</option>
+        <option value="09:00">9:00am</option>
+        <option value="09:30">9:30am</option>
+        <option value="10:00">10:00am</option>
+        <option value="10:30">10:30am</option>
+        <option value="10:00">11:00am</option>
+        <option value="11:30">11:30am</option>
+        <option value="12:00">12:00pm</option>
+        <option value="12:30">12:30pm</option>
+        <option value="13:00">1:00pm</option>
+        <option value="13:30">1:30pm</option>
+        <option value="14:00">2:00pm</option>
+        <option value="14:30">2:30pm</option>
+        <option value="15:00">3:00pm</option>
+        <option value="15:30">3:30pm</option>
+        <option value="16:00">4:00pm</option>
+        <option value="16:30">4:30pm</option>
+        <option value="17:00">5:00pm</option>
+        <option value="17:30">5:30pm</option>
+        <option value="18:00">6:00pm</option>
+        <option value="18:30">6:30pm</option>
+        <option value="19:00">7:00pm</option>
+        <option value="19:30">7:30pm</option>
+        <option value="20:00">8:00pm</option>
+        <option value="20:30">8:30pm</option>
+        <option value="21:00">9:00pm</option>
+        <option value="21:30">9:30pm</option>
+        <option value="22:00">10:00pm</option>
+        <option value="22:30">10:30pm</option>
+        <option value="23:00">11:00pm</option>
+        <option value="23:30">11:30pm</option>
+      </select>
+      <br />
+      <span>Contact Person: </span
+      ><input type="text" name="contact" id="contact" size="20" /><br />
+      <span>Contact Email: </span
+      ><input type="email" name="email" id="email" size="20" /><br />
+      <span>Contact Phone: </span
+      ><input type="text" name="phone" id="phone" size="20" /><br />
+      <span>Registration Link: </span>
+      <input
+        type="text"
+        name="registration-link"
+        id="registration-link"
+        size="20"
+      /><br />
+      <span>Location: </span>
+      <input type="text" name="location" id="location" size="20" /><br />
+      <span>Event online?</span>
+      <select name="online-status" id="online-status">
+        <option>Yes</option>
+        <option>No</option>
+        <option>Hybrid (online and in person)</option>
+      </select><br /><br />
+      <button id="create">Create</button>
+    </div>
+    <div id="created"></div>
+</div>
+  </body>
+
+  <script>
+    var Airtable = require("airtable");
+    // Get a base ID for an instance of art gallery example
+    var base = new Airtable({ apiKey: "keyrvUBWeKVAKiE34" }).base(
+      "appsS1emtg2o2IhRO"
+    );
+
+    var deleteEvent = function (record) {
+      record.destroy(function (err) {
+        if (err) {
+          console.log("Error destroying ", recordId, err);
+        } else {
+          console.log("Destroyed ", record.getId());
+          $('div[data-record-id="' + record.getId() + '"]').remove();
+        }
+      });
+    };
+
+    var loadEvents = function () {
+      $("#events").empty();
+
+      base("Events")
+        .select({
+          sort: [{ field: "Event Name", direction: "asc" }],
+        })
+        .eachPage(
+          function page(records, fetchNextPage) {
+            records.forEach(function (record) {
+              console.log("Retrieved ", record.get("Event Name"));
+
+              let $eventInfo = $("<div>");
+              let $name = $("<h3>").text(record.get("Event Name"));
+
+              let $link = $("<a>")
+                .attr("href", record.get("Link"))
+                .append($("<h3>").text(record.get("Event Name")));
+              //   $eventInfo.append($link);
+
+              let $location = $("<p>").text(
+                "Location: " +
+                  record.get("Event Location") +
+                  " Date and time: " +
+                  new Date(record.get("Event Date-Time")).toLocaleString()
+              );
+              //   $eventInfo.append($location);
+
+              $decription = $("<p>").text(record.get("Event Description"));
+              $contact = $("<p>").text(
+                "Contact: " +
+                  record.get("Contact Person") +
+                  " Email: " +
+                  record.get("Contact Email") +
+                  " Phone: " +
+                  record.get("Contact Phone")
+              );
+              let $delete_btn = $("<p></p>").append(
+                $("<button>")
+                  .text("Delete")
+                  .click(function () {
+                    deleteEvent(record);
+                  })
+              );
+              $eventInfo.append(
+                $link,
+                $location,
+                $decription,
+                $contact,
+                $delete_btn
+              );
+              $eventInfo.attr("data-record-id", record.getId());
+
+              $("#events").append($eventInfo);
+            });
+
+            fetchNextPage();
+          },
+          function done(error) {
+            console.log(error);
+          }
+        );
+    };
+    $("#create").click(function () {
+//	    alert($("link").val());
+      base("Events").create(
+        {
+          "Event Name": $("#event-name").val(),
+          "Link": $("#link").val(),
+          "Event Description": $("#description").val(),
+          "Contact Person": $("#contact").val(),
+          "Event Date-Time": new Date(
+            $("#event-date").val() + " " + $("#event-time").val() + ":00"
+          ).toUTCString(),
+          "Contact Email": $("#email").val(),
+          "Contact Phone": $("#phone").val(),
+          "Registration Link": $("#registration-link").val(),
+          "Event Location": $("#location").val(),
+          "Event Online?": $("#online-status").val(),
+        },
+        function (err, record) {
+          if (err) {
+            alert(err);
+            console.log(err);
+            return;
+          }
+          loadEvents();
+        }
+      );
+    });
+
+    loadEvents();
+  </script>
+</html>
